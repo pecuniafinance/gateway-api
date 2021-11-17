@@ -3,7 +3,11 @@ const globalConfig =
 
 import { PoolsApi, AssetsApi, Configuration, NetworkApi } from '../../sifchain';
 
-// constants
+export interface SwapRate {
+  amount: number;
+  receiveAmount: number;
+  txFee: number;
+}
 
 export default class Sifchain {
   private lcdUrl;
@@ -33,25 +37,45 @@ export default class Sifchain {
   async getNetworkInfo(): Promise<any> {
     return this.networkApi.getNetworkInfo();
   }
+  getReceiveAmount(
+    basePrice: number,
+    amount: number,
+    quotePrice: number
+  ): number {
+    return (basePrice * amount) / quotePrice;
+  }
   // get Sifchain Swap Rate
   async getSwapRate(
     baseToken: string,
     quoteToken: string,
-    amount: number,
-    tradeType: string
-  ): Promise<any> {
+    amount: number
+  ): Promise<SwapRate | string> {
     try {
-      const basePriceRes = await this.assetsApi.getTokenValue(baseToken);
-      const quotePriceRes = await this.assetsApi.getTokenValue(quoteToken);
+      const basePriceRes: any = await this.assetsApi.getTokenValue(baseToken);
+      const quotePriceRes: any = await this.assetsApi.getTokenValue(quoteToken);
 
-      const basePriceData = basePriceRes.data;
-      const quotePriceData = quotePriceRes.data;
-      return {
-        basePriceData,
-        quotePriceData,
-        amount,
-        tradeType,
-      };
+      // Sometimes api returns parameter priceInCUSD instead of priceInUSDC
+      const basePrice = basePriceRes.data.priceInUSDC
+        ? basePriceRes.data.priceInUSDC
+        : basePriceRes.data.priceInCUSD;
+      const quotePrice = quotePriceRes.data.priceInUSDC
+        ? quotePriceRes.data.priceInUSDC
+        : quotePriceRes.data.priceInCUSD;
+
+      if (basePrice && quotePrice) {
+        const receiveAmount = this.getReceiveAmount(
+          parseFloat(basePrice),
+          amount,
+          parseFloat(quotePrice)
+        );
+        return {
+          amount,
+          receiveAmount,
+          txFee: 1, // TODO fix correct fee
+        };
+      } else {
+        throw new Error();
+      }
     } catch (err) {
       console.log(err);
       return 'failed';

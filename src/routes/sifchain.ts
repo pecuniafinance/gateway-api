@@ -36,7 +36,6 @@ router.post('/price', async (req, res) => {
     x-www-form-urlencoded: {
       "base":"ROWAN"
       "quote":"ATOM"
-      "side":"buy" or "sell"
       "amount":1
     }
   */
@@ -44,15 +43,12 @@ router.post('/price', async (req, res) => {
 
   const baseToken = req.body.base;
   const quoteToken = req.body.quote;
-  const tradeType = req.body.side.toUpperCase();
   const amount = parseFloat(req.body.amount);
-
   try {
     const exchangeRate = await sifchain.getSwapRate(
       baseToken,
       quoteToken,
-      amount,
-      tradeType
+      amount
     );
 
     if (typeof exchangeRate === 'string') {
@@ -65,8 +61,6 @@ router.post('/price', async (req, res) => {
         latency: latency(initTime, Date.now()),
         base: baseToken,
         quote: quoteToken,
-        amount: amount,
-        tradeType: tradeType,
         ...exchangeRate,
       });
     }
